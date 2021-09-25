@@ -1,7 +1,11 @@
 # Python 3.8.10
-from scipy import io
 import enum
+import math
+
+import matplotlib.pyplot as plotter
 import numpy
+from scipy import io
+from typing import List
 
 # file paths for loading training and testing sample data
 train_data_file_path = '../data/train_data.mat'
@@ -15,7 +19,6 @@ class Class(enum.Enum):
 
 
 # region helper methods for task1
-
 
 def load_data():
     train_data_class0 = extract_class_data(train_data_file_path, Class.class0)
@@ -50,7 +53,7 @@ def load_data_from_mat_file(file):
 def get_features(data_class):
     assert isinstance(data_class, list)
     x_vector = numpy.empty(shape=(len(data_class), 2), dtype=float)
-    for x in range(len(x_vector)):
+    for x in range(len(data_class)):
         mean = get_mean(data_class[x])
         variance = get_std(data_class[x])
         x_vector[x, :] = [mean, variance]
@@ -63,7 +66,7 @@ def get_mean(array):
 
 
 def get_std(array):
-    assert isinstance(array,  numpy.ndarray)
+    assert isinstance(array, numpy.ndarray)
     return numpy.std(array)
 
 
@@ -108,7 +111,84 @@ def print_dimension(vector_name, vector):
     print("Dimension of " + vector_name + ": ", vector.shape)
 
 
+# plot a list of 2-d vectors
+def plot_2d_vectors(vectors, title="Figure1", x_label="x", y_label="y"):
+    assert isinstance(vectors, List)
+    assert isinstance(vectors[0], numpy.ndarray)
+    assert isinstance(vectors[1], numpy.ndarray)
+    assert vectors[0].shape[1] == 2
+    assert vectors[1].shape[1] == 2
+    assert isinstance(title, str)
+    assert isinstance(x_label, str)
+    assert isinstance(y_label, str)
+    colors = ['orangered', 'forestgreen']
+    for i in range(len(vectors)):
+        class_label = get_axis_label(i)
+        plotter.scatter(x=vectors[i][:, 0], y=vectors[i][:, 1], s=1, c=colors[i % 2], label=class_label)
+        plotter.legend(loc='upper left')
+    plotter.xlabel(x_label)
+    plotter.ylabel(y_label)
+    plotter.title(title)
+    plotter.show()
+
+
 # endregion
+
+# region helper methods for task2
+
+def get_axis_label(class_num):
+    if class_num == 0:
+        return 'Class 0 (Digit 3)'
+    if class_num == 1:
+        return 'Class 1 (Digit 7)'
+    return ''
+
+
+# compute MLE parameter1, mu assuming the given distribution is normal with unknown mean and variance
+def compute_mu(vector):
+    assert isinstance(vector, numpy.ndarray)
+    assert vector.shape[1] == 2
+    n = len(vector)
+    return 1 / n * numpy.array(
+        [[numpy.sum(vector[:, 0])],
+         [numpy.sum(vector[:, 1])]],
+        dtype=float)
+
+
+# compute MLE parameter2, sigma assuming given distribution is normal with unknown mean and variance
+def compute_sigma(vector, mu):
+    assert isinstance(vector, numpy.ndarray)
+    assert vector.shape[1] == 2
+    assert isinstance(mu, numpy.ndarray)
+    assert mu.shape == (2, 1)
+    n = len(vector)
+    vector[:, 0] -= mu[0][0]
+    vector[:, 1] -= mu[1][0]
+    return 1 / n * numpy.dot(vector.transpose(), vector)
+
+
+# endregion
+
+# region helper methods for task2
+
+def get_gradient(y, mu, sigma, priori):
+    assert isinstance(y, numpy.ndarray)
+    assert y.shape[1] == 2
+    assert isinstance(mu, numpy.ndarray)
+    assert mu.shape == (2, 1)
+    assert isinstance(sigma, numpy.ndarray)
+    assert sigma.shape == (2, 2)
+    sigma_inverse = numpy.linalg.inv(sigma)
+    sigma_det = numpy.linalg.det(sigma)
+    return numpy.dot(numpy.dot(sigma_inverse, mu).transpose(), y.transpose()) \
+           - 0.5 * (numpy.dot(numpy.dot(y, sigma_inverse), y.transpose())
+                    + numpy.dot(numpy.dot(mu.transpose(), sigma_inverse), mu)
+                    + math.log(sigma_det)) \
+           + math.log(priori)
+
+
+# endregion
+
 
 def main():
     # load data
@@ -127,10 +207,12 @@ def main():
     # get class0 and class1 Y Vectors for training data
     y_vector_class0_train = get_normalized_data(x_vector_class0_train, m00, s00, m10, s10)
     y_vector_class1_train = get_normalized_data(x_vector_class1_train, m01, s01, m11, s11)
+    # plot_2d_vectors([y_vector_class0_train, y_vector_class1_train],
+    #                 "Training Data", "Y1: Mean (Normalized)", "Y2: Standard Deviation (Normalized)")
 
     # for debugging
-    print_dimension("Y Vector Class 0 Training", y_vector_class0_train)
-    print_dimension("Y Vector Class 1 Training", y_vector_class1_train)
+    # print_dimension("Y Vector Class 0 Training", y_vector_class0_train)
+    # print_dimension("Y Vector Class 1 Training", y_vector_class1_train)
 
     # get lass0 and class1 X Vectors for testing data
     x_vector_class0_test = get_features(test_data_class0)
@@ -139,10 +221,39 @@ def main():
     # get class0 and class1 Y Vectors for testing data
     y_vector_class0_test = get_normalized_data(x_vector_class0_test, m00, s00, m10, s10)
     y_vector_class1_test = get_normalized_data(x_vector_class1_test, m01, s01, m11, s11)
+    # plot_2d_vectors([y_vector_class0_test, y_vector_class1_test],
+    #                 "Testing Data", "Y1: Mean (Normalized)", "Y2: Standard Deviation (Normalized)")
 
     # for debugging
-    print_dimension("Y Vector Class 0 Testing", y_vector_class0_test)
-    print_dimension("Y Vector Class 1 Testing", y_vector_class1_test)
+    # print_dimension("Y Vector Class 0 Testing", y_vector_class0_test)
+    # print_dimension("Y Vector Class 1 Testing", y_vector_class1_test)
+
+    # Task 2: Density estimation
+    mu_class0_train = compute_mu(y_vector_class0_train)
+    mu_class1_train = compute_mu(y_vector_class1_train)
+
+    # for debugging
+    # print("Mu for Class0 Training Data: ", mu_class0_train)
+    # print("Mu for Class0 Training Data:", mu_class1_train)
+
+    sigma_class0_train = compute_sigma(y_vector_class0_train, mu_class0_train)
+    sigma_class1_train = compute_sigma(y_vector_class1_train, mu_class1_train)
+
+    # for debugging
+    # print("Sigma for Class0 Training Data: ", sigma_class0_train)
+    # print("Sigma for Class1 Training Data: ", sigma_class1_train)
+
+    # Task 3: Bayesian Decision Theory for optimal classification
+
+    # Case 1: priori(class0) = priori(class1) = 0.5
+    priori_class0 = 0.5
+    priori_class1 = 0.5
+    g_y_class0_train = get_gradient(y_vector_class0_train, mu_class0_train, sigma_class0_train, priori_class0)
+    g_y_class1_train = get_gradient(y_vector_class1_train, mu_class1_train, sigma_class1_train, priori_class1)
+
+    # for debugging
+    print_dimension("Gradient for Class0 Training Data: ", g_y_class0_train)
+    print_dimension("Gradient for Class1 Training Data: ", g_y_class1_train)
 
 
 # Using the special variable
