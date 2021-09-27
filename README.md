@@ -1,4 +1,7 @@
 # cse569-fsl-project-phase1
+
+## Summary of Project Tasks:
+
 A simple project implementing Feature Extraction, Density Estimation and Bayesian Classification on a dataset which is subset of images (with modifications) from the MNIST dataset.
 
 The original MNIST dataset (http://yann.lecun.com/exdb/mnist/) contains
@@ -38,3 +41,9 @@ Case 1: Assume that the prior probabilities are the same (i.e., P(3) = P(7) =0.5
 Case 2: Assume that the prior probabilities are: P(3) = 0.3, P(7) = 0.7.
 For both cases, report the probability of error of the optimal classifier, for the training set
 and the testing set respectively.
+
+## NOTE
+The code assumes that the source for data is present in the following location relative to the path of solution.py file:
+'../data/train_data.mat'
+'../data/test_data.mat'
+
