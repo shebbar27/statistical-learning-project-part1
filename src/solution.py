@@ -1,10 +1,9 @@
 # Python 3.8.10
 import enum
-import math
-
 import matplotlib.pyplot as plotter
 import numpy
 from scipy import io
+from scipy.stats import multivariate_normal
 from typing import List
 
 # file paths for loading training and testing sample data
@@ -88,18 +87,14 @@ def get_normalized_data(vector, m0, s0, m1, s1):
     assert vector.shape[1] == 2
     assert isinstance(m0, float)
     assert isinstance(s0, float)
+    assert s0 != 0
     assert isinstance(m1, float)
     assert isinstance(s1, float)
+    assert s1 != 0
     y_vector = numpy.empty(shape=(len(vector), 2), dtype=float)
     for x in range(len(y_vector)):
-        if s0 != 0:
-            y1_normalized = (vector[x][0] - m0) / s0
-        else:
-            raise ZeroDivisionError
-        if s1 != 0:
-            y2_normalized = (vector[x][1] - m1) / s1
-        else:
-            raise ZeroDivisionError
+        y1_normalized = (vector[x][0] - m0) / s0
+        y2_normalized = (vector[x][1] - m1) / s1
         y_vector[x, :] = [y1_normalized, y2_normalized]
     return y_vector
 
@@ -132,10 +127,6 @@ def plot_2d_vectors(vectors, title="Figure1", x_label="x", y_label="y"):
     plotter.show()
 
 
-# endregion
-
-# region helper methods for task2
-
 def get_axis_label(class_num):
     if class_num == 0:
         return 'Class 0 (Digit 3)'
@@ -144,9 +135,14 @@ def get_axis_label(class_num):
     return ''
 
 
+# endregion
+
+# region helper methods for task2
+
 # compute MLE parameter1, mu assuming the given distribution is normal with unknown mean and variance
 def compute_mu(vector):
     assert isinstance(vector, numpy.ndarray)
+    assert vector.shape[0] != 0
     assert vector.shape[1] == 2
     n = len(vector)
     return 1 / n * numpy.array(
@@ -158,6 +154,7 @@ def compute_mu(vector):
 # compute MLE parameter2, sigma assuming given distribution is normal with unknown mean and variance
 def compute_sigma(vector, mu):
     assert isinstance(vector, numpy.ndarray)
+    assert vector.shape[0] != 0
     assert vector.shape[1] == 2
     assert isinstance(mu, numpy.ndarray)
     assert mu.shape == (2, 1)
@@ -169,22 +166,29 @@ def compute_sigma(vector, mu):
 
 # endregion
 
-# region helper methods for task2
+# region helper methods for task3
 
-def get_gradient(y, mu, sigma, priori):
-    assert isinstance(y, numpy.ndarray)
+def calculate_error(mu0, sigma0, priori0, mu1, sigma1, priori1, y):
+    assert isinstance(mu0, numpy.ndarray)
+    assert mu0.shape == (2, 1)
+    assert isinstance(sigma0, numpy.ndarray)
+    assert sigma0.shape == (2, 2)
+    assert isinstance(mu1, numpy.ndarray)
+    assert mu1.shape == (2, 1)
+    assert isinstance(sigma1, numpy.ndarray)
+    assert sigma1.shape == (2, 2)
+    assert isinstance(priori0, float)
+    assert isinstance(priori1, float)
+    assert y.shape[0] != 0
     assert y.shape[1] == 2
-    assert isinstance(mu, numpy.ndarray)
-    assert mu.shape == (2, 1)
-    assert isinstance(sigma, numpy.ndarray)
-    assert sigma.shape == (2, 2)
-    sigma_inverse = numpy.linalg.inv(sigma)
-    sigma_det = numpy.linalg.det(sigma)
-    return numpy.dot(numpy.dot(sigma_inverse, mu).transpose(), y.transpose()) \
-           - 0.5 * (numpy.dot(numpy.dot(y, sigma_inverse), y.transpose())
-                    + numpy.dot(numpy.dot(mu.transpose(), sigma_inverse), mu)
-                    + math.log(sigma_det)) \
-           + math.log(priori)
+    dist0 = multivariate_normal(mean=mu0.flatten(), cov=sigma0)
+    dist1 = multivariate_normal(mean=mu1.flatten(), cov=sigma1)
+    probs = []
+    for x in y:
+        prob0 = dist0.pdf(x) * priori0
+        prob1 = dist1.pdf(x) * priori1
+        probs.append(min(prob0, prob1))
+    return 1 / len(y) * numpy.sum(probs)
 
 
 # endregion
@@ -207,12 +211,12 @@ def main():
     # get class0 and class1 Y Vectors for training data
     y_vector_class0_train = get_normalized_data(x_vector_class0_train, m00, s00, m10, s10)
     y_vector_class1_train = get_normalized_data(x_vector_class1_train, m01, s01, m11, s11)
-    # plot_2d_vectors([y_vector_class0_train, y_vector_class1_train],
-    #                 "Training Data", "Y1: Mean (Normalized)", "Y2: Standard Deviation (Normalized)")
+    plot_2d_vectors([y_vector_class0_train, y_vector_class1_train],
+                    'Training Data', 'Y1: Mean (Normalized)', 'Y2: Standard Deviation (Normalized)')
 
     # for debugging
-    # print_dimension("Y Vector Class 0 Training", y_vector_class0_train)
-    # print_dimension("Y Vector Class 1 Training", y_vector_class1_train)
+    # print_dimension('Y Vector Class 0 Training', y_vector_class0_train)
+    # print_dimension('Y Vector Class 1 Training', y_vector_class1_train)
 
     # get lass0 and class1 X Vectors for testing data
     x_vector_class0_test = get_features(test_data_class0)
@@ -221,39 +225,82 @@ def main():
     # get class0 and class1 Y Vectors for testing data
     y_vector_class0_test = get_normalized_data(x_vector_class0_test, m00, s00, m10, s10)
     y_vector_class1_test = get_normalized_data(x_vector_class1_test, m01, s01, m11, s11)
-    # plot_2d_vectors([y_vector_class0_test, y_vector_class1_test],
-    #                 "Testing Data", "Y1: Mean (Normalized)", "Y2: Standard Deviation (Normalized)")
+    plot_2d_vectors([y_vector_class0_test, y_vector_class1_test],
+                    'Testing Data", "Y1: Mean (Normalized)', 'Y2: Standard Deviation (Normalized)')
 
     # for debugging
-    # print_dimension("Y Vector Class 0 Testing", y_vector_class0_test)
-    # print_dimension("Y Vector Class 1 Testing", y_vector_class1_test)
+    # print_dimension('Y Vector Class 0 Testing', y_vector_class0_test)
+    # print_dimension('Y Vector Class 1 Testing', y_vector_class1_test)
 
     # Task 2: Density estimation
     mu_class0_train = compute_mu(y_vector_class0_train)
     mu_class1_train = compute_mu(y_vector_class1_train)
-
-    # for debugging
-    # print("Mu for Class0 Training Data: ", mu_class0_train)
-    # print("Mu for Class0 Training Data:", mu_class1_train)
-
     sigma_class0_train = compute_sigma(y_vector_class0_train, mu_class0_train)
     sigma_class1_train = compute_sigma(y_vector_class1_train, mu_class1_train)
 
     # for debugging
-    # print("Sigma for Class0 Training Data: ", sigma_class0_train)
-    # print("Sigma for Class1 Training Data: ", sigma_class1_train)
+    print('Mu for Class0 Training Data:\n', mu_class0_train)
+    print('Sigma for Class0 Training Data:\n', sigma_class0_train)
+    print('Mu for Class1 Training Data:\n', mu_class1_train)
+    print('Sigma for Class1 Training Data:\n', sigma_class1_train)
 
     # Task 3: Bayesian Decision Theory for optimal classification
+
+    all_class_train_data = numpy.append(y_vector_class0_train, y_vector_class1_train, axis=0)
+    all_class_test_data = numpy.append(y_vector_class0_test, y_vector_class1_test, axis=0)
 
     # Case 1: priori(class0) = priori(class1) = 0.5
     priori_class0 = 0.5
     priori_class1 = 0.5
-    g_y_class0_train = get_gradient(y_vector_class0_train, mu_class0_train, sigma_class0_train, priori_class0)
-    g_y_class1_train = get_gradient(y_vector_class1_train, mu_class1_train, sigma_class1_train, priori_class1)
+    prob_error_case0_train = calculate_error(
+        mu_class0_train,
+        sigma_class0_train,
+        priori_class0,
+        mu_class1_train,
+        sigma_class1_train,
+        priori_class1,
+        all_class_train_data
+    )
+
+    prob_error_case0_test = calculate_error(
+        mu_class0_train,
+        sigma_class0_train,
+        priori_class0,
+        mu_class1_train,
+        sigma_class1_train,
+        priori_class1,
+        all_class_test_data
+    )
 
     # for debugging
-    print_dimension("Gradient for Class0 Training Data: ", g_y_class0_train)
-    print_dimension("Gradient for Class1 Training Data: ", g_y_class1_train)
+    print(f'Case0: Probability of Error for Training Data = {prob_error_case0_train:.5f}')
+    print(f'Case0: Probability of Error for Testing Data = {prob_error_case0_test:.5f}')
+
+    # Case 2: priori(class0) = 0.3 and priori(class1) = 0.7
+    priori_class0 = 0.3
+    priori_class1 = 0.7
+    prob_error_case1_train = calculate_error(
+        mu_class0_train,
+        sigma_class0_train,
+        priori_class0,
+        mu_class1_train,
+        sigma_class1_train,
+        priori_class1,
+        all_class_train_data
+    )
+
+    prob_error_case1_test = calculate_error(
+        mu_class0_train,
+        sigma_class0_train,
+        priori_class0,
+        mu_class1_train,
+        sigma_class1_train,
+        priori_class1,
+        all_class_test_data
+    )
+
+    print(f'Case1: Probability of Error for Training Data = {prob_error_case1_train:.5f}')
+    print(f'Case1: Probability of Error for Testing Data = {prob_error_case1_test:.5f}')
 
 
 # Using the special variable
