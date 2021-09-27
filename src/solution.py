@@ -129,9 +129,9 @@ def plot_2d_vectors(vectors, title="Figure1", x_label="x", y_label="y"):
 
 def get_axis_label(class_num):
     if class_num == 0:
-        return 'Class 0 (Digit 3)'
+        return f'Class 0 (Digit {Class.class0.value})'
     if class_num == 1:
-        return 'Class 1 (Digit 7)'
+        return f'Class 0 (Digit {Class.class1.value})'
     return ''
 
 
@@ -198,7 +198,7 @@ def main():
     # load data
     train_data_class0, train_data_class1, test_data_class0, test_data_class1 = load_data()
 
-    # Task 1: Feature extraction and normalization
+    # region Task 1: Feature extraction and normalization
 
     # get class0 and class1 X Vectors for training data
     x_vector_class0_train = get_features(train_data_class0)
@@ -226,13 +226,15 @@ def main():
     y_vector_class0_test = get_normalized_data(x_vector_class0_test, m00, s00, m10, s10)
     y_vector_class1_test = get_normalized_data(x_vector_class1_test, m01, s01, m11, s11)
     plot_2d_vectors([y_vector_class0_test, y_vector_class1_test],
-                    'Testing Data", "Y1: Mean (Normalized)', 'Y2: Standard Deviation (Normalized)')
+                    'Testing Data', 'Y1: Mean (Normalized)', 'Y2: Standard Deviation (Normalized)')
 
     # for debugging
     # print_dimension('Y Vector Class 0 Testing', y_vector_class0_test)
     # print_dimension('Y Vector Class 1 Testing', y_vector_class1_test)
 
-    # Task 2: Density estimation
+    # endregion
+
+    # region Task 2: Density estimation
     mu_class0_train = compute_mu(y_vector_class0_train)
     mu_class1_train = compute_mu(y_vector_class1_train)
     sigma_class0_train = compute_sigma(y_vector_class0_train, mu_class0_train)
@@ -244,7 +246,9 @@ def main():
     print('Mu for Class1 Training Data:\n', mu_class1_train)
     print('Sigma for Class1 Training Data:\n', sigma_class1_train)
 
-    # Task 3: Bayesian Decision Theory for optimal classification
+    # endregion
+
+    # region Task 3: Bayesian Decision Theory for optimal classification
 
     all_class_train_data = numpy.append(y_vector_class0_train, y_vector_class1_train, axis=0)
     all_class_test_data = numpy.append(y_vector_class0_test, y_vector_class1_test, axis=0)
@@ -299,8 +303,11 @@ def main():
         all_class_test_data
     )
 
+    # for debugging
     print(f'Case1: Probability of Error for Training Data = {prob_error_case1_train:.5f}')
     print(f'Case1: Probability of Error for Testing Data = {prob_error_case1_test:.5f}')
+
+    # endregion
 
 
 # Using the special variable
