@@ -1,4 +1,4 @@
-# cse569-fsl-project-phase1
+# cse569-fsl-project-part1
 
 ## Summary of Project Tasks:
 
